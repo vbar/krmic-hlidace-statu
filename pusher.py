@@ -48,6 +48,13 @@ class Pusher:
 
         self.dataset_id = get_mandatory(cfg, "datasetId")
         self.mode = cfg.get("mode")
+
+        force_rewrite = cfg.get("forceRewrite")
+        if force_rewrite:
+            self.force_rewrite = set(force_rewrite)
+        else:
+            self.force_rewrite = set()
+
         self.varyMode = cfg.get("varyModeOnError")
 
         source_dir = cfg.get("sourceDir", "json")
@@ -57,7 +64,8 @@ class Pusher:
         return glob.glob(self.mask)
 
     def push_one(self, conn, fname, item_id):
-        self.do_push_one(conn, fname, item_id, self.mode)
+        mode = 'rewrite' if item_id in self.force_rewrite else self.mode
+        self.do_push_one(conn, fname, item_id, mode)
         os.remove(fname)
 
     def do_push_one(self, conn, fname, item_id, mode):
