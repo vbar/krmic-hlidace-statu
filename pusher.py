@@ -74,31 +74,33 @@ class Pusher:
             for ln in f:
                 body += ln
 
-        path = "/api/v1/DatasetItem/%s/%s" % (self.dataset_id, item_id)
+        path = "/api/v2/Datasety/%s/zaznamy/%s" % (self.dataset_id, item_id)
         if mode:
             path += "?mode="
             path += mode
 
-        print("posting " + fname + "...")
+        print("posting " + path + "...")
         conn.request("POST", path, body, self.headers)
 
         rsp = conn.getresponse()
         if rsp.status != 200:
-            raise Exception("unexpected status " + str(rsp.status))
+            if (rsp.status == 400) and (mode == 'merge') and self.varyMode:
+                rsp.read()
+                self.retry_one(conn, fname, item_id, body)
+                return
+            else:
+                raise Exception("unexpected status " + str(rsp.status))
 
         answer = rsp.read().decode('utf-8')
         d = json.loads(answer)
         if (d.get("id") != item_id) or d.get("error"):
-            if (mode == 'merge') and self.varyMode:
-                self.retry_one(conn, fname, item_id, body)
-            else:
-                raise Exception("unexpected answer " + answer)
+            raise Exception("unexpected answer " + answer)
 
     def retry_one(self, conn, fname, item_id, body):
         new_doc = json.loads(body.decode('utf-8'))
         new_birth = get_birth_date(new_doc)
 
-        path = "/api/v1/DatasetItem/%s/%s" % (self.dataset_id, item_id)
+        path = "/api/v2/Datasety/%s/zaznamy/%s" % (self.dataset_id, item_id)
         print("checking " + item_id + "...")
         conn.request("GET", path, None, self.headers)
 
